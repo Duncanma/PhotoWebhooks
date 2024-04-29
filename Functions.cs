@@ -14,9 +14,7 @@ using Azure.Storage.Queues;
 using System.Text.Json;
 using Azure;
 using Azure.Communication.Email;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Azure.Storage.Blobs;
-using Azure.Storage.Queues.Models;
 
 
 namespace PhotoWebhooks
@@ -60,6 +58,7 @@ namespace PhotoWebhooks
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             StripeConfiguration.ApiKey = stripeKey;
+            StripeConfiguration.AppInfo = new AppInfo() { Name = "CheckoutComplete Azure Function" };
 
             try
             {

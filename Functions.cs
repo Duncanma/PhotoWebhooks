@@ -43,22 +43,27 @@ namespace PhotoWebhooks
         {
             Console.WriteLine("Checkout Complete");
             //get stripe key
-            var stripeKey = Environment.GetEnvironmentVariable("StripeKey");
-            var webhookSigningSecret = Environment.GetEnvironmentVariable("WebhookSigningSecret");
-            string connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
+            var stripeKey 
+                = Environment.GetEnvironmentVariable("StripeKey");
+            var webhookSigningSecret 
+                = Environment.GetEnvironmentVariable("WebhookSigningSecret");
+            string connectionString 
+                = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
             QueueClientOptions queueClientOptions = new QueueClientOptions()
             {
                 MessageEncoding = QueueMessageEncoding.Base64
             };
 
-            QueueClient queueClient = new QueueClient(connectionString, incomingQueue, queueClientOptions);
+            QueueClient queueClient 
+                = new QueueClient(connectionString, incomingQueue, queueClientOptions);
             queueClient.CreateIfNotExists();
 
             log.LogInformation("Stripe Webhook called");
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             StripeConfiguration.ApiKey = stripeKey;
-            StripeConfiguration.AppInfo = new AppInfo() { Name = "CheckoutComplete Azure Function" };
+            StripeConfiguration.AppInfo 
+                = new AppInfo() { Name = "CheckoutComplete Azure Function" };
 
             try
             {
@@ -69,14 +74,14 @@ namespace PhotoWebhooks
                 );
                 if (stripeEvent.Type == Events.CheckoutSessionCompleted)
                 {
-                    log.LogInformation($"Checkout Session Completed Event: {stripeEvent.Id}");
+                    log.LogInformation(
+                        $"Checkout Session Completed Event: {stripeEvent.Id}");
 
                     var session = stripeEvent.Data.Object as Session;
                     var options = new SessionGetOptions();
                     options.AddExpand("line_items");
 
                     var service = new SessionService();
-                    // Retrieve the session. If you require line items in the response, you may include them by expanding line_items.
                     Session sessionWithLineItems = service.Get(session.Id, options);
                     StripeList<LineItem> lineItems = sessionWithLineItems.LineItems;
 
@@ -95,7 +100,11 @@ namespace PhotoWebhooks
                         if (customerName == null) { 
                             customerName = customerEmail; 
                         }
-                        IncomingOrder order = new IncomingOrder() { CustomerEmail = customerEmail, CustomerName = customerName, ProductId = productId };
+                        IncomingOrder order 
+                            = new IncomingOrder() { 
+                                CustomerEmail = customerEmail, 
+                                CustomerName = customerName, 
+                                ProductId = productId };
                         string message = JsonSerializer.Serialize(order);
                         await queueClient.SendMessageAsync(message);
                     }
@@ -122,7 +131,8 @@ namespace PhotoWebhooks
 
                 return new BadRequestErrorMessageResult(e.Message);
             }
-            //any other exception will throw, which is desired behaviour (returns a 500, etc.)
+            //any other exception will throw,
+            //which is desired behaviour (returns a 500, etc.)
 
         }
 

@@ -136,101 +136,124 @@ namespace PhotoWebhooks
 
         }
 
-        //ProcessImage
-        //SendImage
 
         [FunctionName("ProcessOrder")]
         public static async Task processOrder(
-            [QueueTrigger(incomingQueue, Connection = "AZURE_STORAGE_CONNECTION_STRING")] string queueMessage,
+            [QueueTrigger(
+                incomingQueue, 
+                Connection = "AZURE_STORAGE_CONNECTION_STRING")
+            ] string queueMessage,
             ILogger log)
         {
-            Console.WriteLine("Process Order");
+            IncomingOrder order 
+                = JsonSerializer.Deserialize<IncomingOrder>(queueMessage);
 
-            Console.WriteLine(queueMessage);
-
-            IncomingOrder order = JsonSerializer.Deserialize<IncomingOrder>(queueMessage);
-
-            string connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
+            string connectionString 
+                = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
             QueueClientOptions queueClientOptions = new QueueClientOptions()
             {
                 MessageEncoding = QueueMessageEncoding.Base64
             };
 
-            QueueClient queueClient = new QueueClient(connectionString, sendEmailQueue, queueClientOptions);
+            QueueClient queueClient = new QueueClient(
+                connectionString, sendEmailQueue, queueClientOptions);
             queueClient.CreateIfNotExists();
 
-            log.LogInformation($"Process Order Called : {order.ProductId} {order.CustomerEmail}");
+            log.LogInformation(
+                $"Process Order Called : {order.ProductId} {order.CustomerEmail}");
 
             //fetch image blob
             string imageFile = $"{order.ProductId}.jpg";
 
-            BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
-
-            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient("originals");
-
-            BlobClient blobClient = containerClient.GetBlobClient(imageFile);
+            BlobServiceClient blobServiceClient 
+                = new BlobServiceClient(connectionString);
+            BlobContainerClient containerClient 
+                = blobServiceClient.GetBlobContainerClient("originals");
+            BlobClient blobClient 
+                = containerClient.GetBlobClient(imageFile);
 
             //create a unique URL to the image for this customer, with 30-day expiry
-            Azure.Storage.Sas.BlobSasBuilder builder = new Azure.Storage.Sas.BlobSasBuilder(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.Now.AddDays(30));
+            Azure.Storage.Sas.BlobSasBuilder builder 
+                = new Azure.Storage.Sas.BlobSasBuilder(
+                    Azure.Storage.Sas.BlobSasPermissions.Read, 
+                    DateTimeOffset.Now.AddDays(30));
 
             builder.ContentDisposition = $"attachment; filename={imageFile}";
 
             var imageURL = blobClient.GenerateSasUri(builder);
 
 
-            //add to the order
-            order.ImageURL = imageURL.ToString().Replace("https://duncanmackenzieblog.blob.core.windows.net/originals/", "https://originals.duncanmackenzie.net/");
+            //add to the order, using my custom domain
+            order.ImageURL
+                = imageURL.ToString().Replace(
+                    "https://duncanmackenzieblog.blob.core.windows.net/originals/",
+                    "https://originals.duncanmackenzie.net/");
 
             string message = JsonSerializer.Serialize(order);
-            Console.WriteLine(message);
             await queueClient.SendMessageAsync(message);
         }
 
 
         [FunctionName("SendLink")]
         public static async Task sendLink(
-    [QueueTrigger(sendEmailQueue, Connection = "AZURE_STORAGE_CONNECTION_STRING")] string queueMessage,
-    ILogger log)
+            [QueueTrigger(sendEmailQueue, 
+            Connection = "AZURE_STORAGE_CONNECTION_STRING")
+            ] string queueMessage,
+            ILogger log)
         {
-            Console.WriteLine("Send Link");
-            Console.WriteLine(queueMessage);
+            IncomingOrder order 
+                = JsonSerializer.Deserialize<IncomingOrder>(queueMessage);
 
-            IncomingOrder order = JsonSerializer.Deserialize<IncomingOrder>(queueMessage);
+            log.LogInformation(
+                $"Request to send message: {order.ProductId} {order.CustomerEmail}");
 
-            log.LogInformation($"Request to send message: {order.ProductId} {order.CustomerEmail}");
-            // This code retrieves your connection string from an environment variable.
-            string connectionString = Environment.GetEnvironmentVariable("EmailServiceConnectionString");
+            string connectionString 
+                = Environment.GetEnvironmentVariable("EmailServiceConnectionString");
+
             var emailClient = new EmailClient(connectionString);
 
 
             string htmlMessage = "<html><h1>Your photo order</h1>" +
                 "<p>Thank you for your order from DuncanMackenzie.net.</p>" +
-                $"<p>To <a href=\"{order.ImageURL}\">retrieve the full size version of your photo, click this link</a>. " +
+                $"<p>To <a href=\"{order.ImageURL}\">retrieve the full size" + 
+                " version of your photo, click this link</a>. " +
                 "The file will be large, but should download to your device.</p>" +
-                "<p>Once downloaded, you should save this image somewhere safe, as this link will only work for 30 days.</p>" +
-                "<p>If you have any questions, please feel free to email me at <a href=\"mailto:support@duncanmackenzie.net\">support@duncanmackenzie.net</a></p>" +
+                "<p>Once downloaded, you should save this image somewhere safe, " + 
+                "as this link will only work for 30 days.</p>" +
+                "<p>If you have any questions, please feel free to email me " + 
+                "at <a href=\"mailto:support@duncanmackenzie.net\">" + 
+                "support@duncanmackenzie.net</a></p>" +
                 "</html>";
 
             string plainMessage = "Your photo order\n\n" +
                 "Thank you for your order from DuncanMackenzie.net.\n" +
-                $"To retrieve the full size version of your photo, click this link: {order.ImageURL} \n\n" +
+                "To retrieve the full size version of your photo, " 
+                + $"click this link: {order.ImageURL} \n\n" +
                 "The file will be large, but should download to your device.\n" +
-                "Once downloaded, you should save this image somewhere safe, as this link will only work for 30 days.\n\n" +
-                "If you have any questions, please feel free to email me at support@duncanmackenzie.net\n\n";
+                "Once downloaded, you should save this image somewhere safe, " +  
+                "as this link will only work for 30 days.\n\n" +
+                "If you have any questions, please feel free to email"
+                + "me at support@duncanmackenzie.net\n\n";
 
             EmailRecipients recipients = new EmailRecipients();
-            recipients.To.Add(new EmailAddress(order.CustomerEmail, order.CustomerName));
-            recipients.BCC.Add(new EmailAddress("support@duncanmackenzie.net", "Support"));
+            recipients.To.Add(
+                new EmailAddress(order.CustomerEmail, order.CustomerName));
+            recipients.BCC.Add(
+                new EmailAddress("support@duncanmackenzie.net", "Support"));
 
-            EmailContent content = new EmailContent("Your photo order from DuncanMackenzie.net");
+            EmailContent content
+                = new EmailContent("Your photo order from DuncanMackenzie.net");
             content.PlainText = plainMessage;
             content.Html = htmlMessage;
 
-            EmailMessage messageToSend = new EmailMessage("DoNotReply@messaging.duncanmackenzie.net", recipients, content);
+            EmailMessage messageToSend
+                = new EmailMessage("DoNotReply@messaging.duncanmackenzie.net", 
+                recipients, content);
 
             await emailClient.SendAsync(WaitUntil.Started, messageToSend);
 
-            log.LogInformation($"Message sent: {order.ProductId} {order.CustomerEmail}");
+            log.LogInformation(
+                $"Message sent: {order.ProductId} {order.CustomerEmail}");
         }
     }
 }

@@ -14,7 +14,11 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.61.1" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.4.0" />
+    <PackageReference Include="QuickChart" Version="2.3.0" />
     <PackageReference Include="Stripe.net" Version="44.9.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\uap-csharp\UAParser\UAParser.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">

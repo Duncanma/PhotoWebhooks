@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34525.116
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoWebhooks", "PhotoWebhooks.csproj", "{38D4834F-098B-42C7-9EC3-F7B4EA072C26}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PhotoWebhooks", "PhotoWebhooks.csproj", "{38D4834F-098B-42C7-9EC3-F7B4EA072C26}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UAParser", "..\uap-csharp\UAParser\UAParser.csproj", "{E58983AC-CBB0-4FC7-8365-24194940C4C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoWebhooksTests", "..\PhotoWebhooksTests\PhotoWebhooksTests.csproj", "{421AAFDB-FF5B-4B7E-89A7-C91FD5AD4657}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{38D4834F-098B-42C7-9EC3-F7B4EA072C26}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{38D4834F-098B-42C7-9EC3-F7B4EA072C26}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{38D4834F-098B-42C7-9EC3-F7B4EA072C26}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E58983AC-CBB0-4FC7-8365-24194940C4C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E58983AC-CBB0-4FC7-8365-24194940C4C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E58983AC-CBB0-4FC7-8365-24194940C4C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E58983AC-CBB0-4FC7-8365-24194940C4C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{421AAFDB-FF5B-4B7E-89A7-C91FD5AD4657}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{421AAFDB-FF5B-4B7E-89A7-C91FD5AD4657}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{421AAFDB-FF5B-4B7E-89A7-C91FD5AD4657}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{421AAFDB-FF5B-4B7E-89A7-C91FD5AD4657}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

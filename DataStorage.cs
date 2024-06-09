@@ -16,13 +16,13 @@ namespace PhotoWebhooks
         private Database database;
 
         // The container we will create.
-        private Container container;
+        private Container c_viewEvents;
         private Container c_viewsByDate;
         private Container c_viewsByPathByDate;
 
         // The name of the database and container we will create
         private string databaseId = "Analytics";
-        private string containerId = "ViewEvents";
+        private string viewEvents = "ViewEvents";
         private string viewsByDate = "ViewsByDate";
         private string viewsByPath = "ViewsByPathByDate";
 
@@ -41,7 +41,7 @@ namespace PhotoWebhooks
         private async Task CreateContainersAsync()
         {
             // Create a new container
-            this.container = await this.database.CreateContainerIfNotExistsAsync(containerId, "/day");
+            this.c_viewEvents = await this.database.CreateContainerIfNotExistsAsync(viewEvents, "/day");
             // Create a new container
             this.c_viewsByDate = await this.database.CreateContainerIfNotExistsAsync(viewsByDate, "/dateType");
             // Create a new container
@@ -63,7 +63,7 @@ namespace PhotoWebhooks
 
         public async Task CreateRequestItem(RequestRecord request)
         {
-            await this.container.CreateItemAsync<RequestRecord>(request, new PartitionKey(request.day));
+            await this.c_viewEvents.CreateItemAsync<RequestRecord>(request, new PartitionKey(request.day));
         }
 
         public async Task CreateViewByDate(ViewsByDate viewByDate)
@@ -78,18 +78,24 @@ namespace PhotoWebhooks
 
         public async Task<Dictionary<string, string>> GetViewsByDay(int days)
         {
-            Dictionary<string, string> results = new Dictionary<string, string>();
+            Dictionary<string, string> results 
+                = new Dictionary<string, string>();
 
-            string query = "SELECT c.dateType,c.id,c.views FROM c WHERE c.id > @firstDay ORDER by c.id";
+            string query = "SELECT c.dateType,c.id,c.views " +
+                "FROM c WHERE c.id > @firstDay ORDER by c.id";
+
             QueryDefinition q = new QueryDefinition(query)
-                .WithParameter("@firstDay", DateTimeOffset.Now.AddDays(days).ToString("yyyyMMdd"));
+                .WithParameter("@firstDay", 
+                DateTimeOffset.Now.AddDays(days).ToString("yyyyMMdd"));
 
-            using (FeedIterator<ViewsByDate> feedIterator = this.c_viewsByDate.GetItemQueryIterator<ViewsByDate>(
-                q))
+            using (FeedIterator<ViewsByDate> feedIterator 
+                = this.c_viewsByDate.GetItemQueryIterator<ViewsByDate>(q))
             {
                 while (feedIterator.HasMoreResults)
                 {
-                    FeedResponse<ViewsByDate> response = await feedIterator.ReadNextAsync();
+                    FeedResponse<ViewsByDate> response 
+                        = await feedIterator.ReadNextAsync();
+
                     foreach (var item in response)
                     {
                         results.Add(item.id, item.views);
@@ -104,15 +110,23 @@ namespace PhotoWebhooks
         {
             string query = "";
             if (dateType == "day") {
-                query = "SELECT 'day' as dateType, c.day as id, count(1) as views FROM c GROUP BY c.day ORDER by c.day offset 0 limit 5";
+                query = "SELECT @dateType as dateType, c.day as id, " + 
+                    "count(1) as views FROM c WHERE c.day > @firstDay GROUP BY c.day " + 
+                    "ORDER by c.day offset 0 limit 8";
             }
+            QueryDefinition q = new QueryDefinition(query)
+                .WithParameter("@dateType", "day")
+                .WithParameter("@firstDay", DateTimeOffset.Now.AddDays(-8).ToString("yyyyMMdd"));
 
-            using (FeedIterator<ViewsByDate> feedIterator = this.container.GetItemQueryIterator<ViewsByDate>(
-                query))
+
+            using (FeedIterator<ViewsByDate> feedIterator 
+                = this.c_viewEvents.GetItemQueryIterator<ViewsByDate>(
+                q))
             {
                 while (feedIterator.HasMoreResults)
                 {
-                    FeedResponse<ViewsByDate> response = await feedIterator.ReadNextAsync();
+                    FeedResponse<ViewsByDate> response 
+                        = await feedIterator.ReadNextAsync();
                     foreach (var item in response)
                     {
                         await this.c_viewsByDate.UpsertItemAsync(item);
@@ -127,20 +141,21 @@ namespace PhotoWebhooks
             string query = "";
             if (dateType == "day")
             {
-                query = "SELECT @dateType as dateType, c.day as id, c.page, count(1) as views FROM c WHERE c.day > @firstDay GROUP BY c.day, c.page ORDER BY c.day desc";
+                query = "SELECT @dateType as dateType, c.day, c.page, count(1) as views FROM c WHERE c.day > @firstDay GROUP BY c.day, c.page ORDER BY c.day desc";
             }
 
             QueryDefinition q = new QueryDefinition(query)
                 .WithParameter("@dateType", dateType)
-                .WithParameter("@firstDay", DateTimeOffset.Now.AddDays(-1).ToString("yyyyMMdd"));
+                .WithParameter("@firstDay", DateTimeOffset.Now.AddDays(-2).ToString("yyyyMMdd"));
             
-            using (FeedIterator<ViewsByPathByDate> feedIterator = this.container.GetItemQueryIterator<ViewsByPathByDate>(q))
+            using (FeedIterator<ViewsByPathByDate> feedIterator = this.c_viewEvents.GetItemQueryIterator<ViewsByPathByDate>(q))
             {
                 while (feedIterator.HasMoreResults)
                 {
                     FeedResponse<ViewsByPathByDate> response = await feedIterator.ReadNextAsync();
                     foreach (var item in response)
                     {
+                        item.id = item.page.Replace("/", "--") + "::" + item.day;
                         await this.c_viewsByPathByDate.UpsertItemAsync(item);
                     }
                 }

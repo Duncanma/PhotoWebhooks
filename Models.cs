@@ -39,15 +39,16 @@ namespace PhotoWebhooks
 
     public class ViewsByDate
     {
-        public string dateType { get; set; }
+        public string dateType { get; set; } //partition key
         public string id { get; set; } //date
         public string views { get; set; }
     }
 
     public class ViewsByPathByDate
     {
-        public string dateType { get; set; }
-        public string id { get; set; } //date
+        public string dateType { get; set; } //partition key
+        public string id { get; set;} //page+day, unique per partion
+        public string day { get; set; } 
         public string page { get; set; }
         public string views { get; set; }
     }

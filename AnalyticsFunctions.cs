@@ -34,7 +34,8 @@ namespace PhotoWebhooks
         }
 
         [FunctionName("event")]
-        [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Client)]
+        [ResponseCache(Duration = 3600, 
+            Location = ResponseCacheLocation.Client)]
         public static async Task<IActionResult> trackAnalyticsEvent(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
             ILogger log)
@@ -42,21 +43,25 @@ namespace PhotoWebhooks
             try
             {
                 string connectionString
-                    = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
+                    = Environment.GetEnvironmentVariable(
+                        "AZURE_STORAGE_CONNECTION_STRING");
 
-                QueueClientOptions queueClientOptions = new QueueClientOptions()
+                QueueClientOptions queueClientOptions 
+                    = new QueueClientOptions()
                 {
                     MessageEncoding = QueueMessageEncoding.Base64
                 };
 
                 QueueClient queueClient
-                    = new QueueClient(connectionString, analyticsEvent, queueClientOptions);
+                    = new QueueClient(connectionString, 
+                    analyticsEvent, queueClientOptions);
 
                 //queueClient.CreateIfNotExists();
 
                 RequestRecord request = CreateRequestRecordFromRequest(req, log);
 
-                if (!FunctionsHelpers.RequestIsCrawler(request) && !FunctionsHelpers.RequestIsLocal(request))
+                if (!FunctionsHelpers.RequestIsCrawler(request) 
+                    && !FunctionsHelpers.RequestIsLocal(request))
                 {
                     string message = JsonSerializer.Serialize(request);
                     await queueClient.SendMessageAsync(message);
@@ -88,10 +93,14 @@ namespace PhotoWebhooks
             {
                 if (request.country == null)
                 {
-                    var maxMindAccountID = Environment.GetEnvironmentVariable("MaxMindAccountID");
-                    var maxMindLicenseKey = Environment.GetEnvironmentVariable("MaxMindLicenseKey");
+                    var maxMindAccountID 
+                        = Environment.GetEnvironmentVariable("MaxMindAccountID");
+                    var maxMindLicenseKey 
+                        = Environment.GetEnvironmentVariable("MaxMindLicenseKey");
                     int accountID = int.Parse(maxMindAccountID);
-                    using (var client = new WebServiceClient(accountID, maxMindLicenseKey, host: "geolite.info"))
+                    using (var client 
+                        = new WebServiceClient(accountID, maxMindLicenseKey,
+                        host: "geolite.info"))
                     {
                         var country = await client.CountryAsync(request.ip_address);
                         request.country = country.Country.IsoCode;
@@ -114,7 +123,8 @@ namespace PhotoWebhooks
 
                 if (!String.IsNullOrEmpty(request.referrer))
                 {
-                    request.simple_referrer = FunctionsHelpers.SimplifyReferrer(request.referrer);
+                    request.simple_referrer 
+                        = FunctionsHelpers.SimplifyReferrer(request.referrer);
                 }
 
                 string cosmosEndpoint
@@ -133,7 +143,8 @@ namespace PhotoWebhooks
         //0 30 0 * * *
         [FunctionName("ComputeViewsByDay")]
         [FixedDelayRetry(5, "00:00:10")]
-        public static async Task ComputeViewsByDay([TimerTrigger("0 30 0 * * *")] TimerInfo timerInfo,
+        public static async Task ComputeViewsByDay(
+            [TimerTrigger("0 30 3 * * *")] TimerInfo timerInfo,
             ILogger log)
         {
             Console.WriteLine("ComputeViewsByDay");
@@ -152,7 +163,7 @@ namespace PhotoWebhooks
         //0 */5 * * * *
         [FunctionName("ComputeViewsByPathByDay")]
         [FixedDelayRetry(5, "00:00:10")]
-        public static async Task ComputeViewsByPathByDay([TimerTrigger("0 0 2 * * *")] TimerInfo timerInfo,
+        public static async Task ComputeViewsByPathByDay([TimerTrigger("0 0 4 * * *")] TimerInfo timerInfo,
             ILogger log)
         {
             Console.WriteLine("ComputeViewsByPathByDay");
@@ -168,13 +179,12 @@ namespace PhotoWebhooks
             await data.GetAndSaveViewsByPathByDate("day");
         }
 
-        [FunctionName("SendSomeCharts")]
+        [FunctionName("SendDailySummary")]
         [FixedDelayRetry(5, "00:00:10")]
-        public static async Task SendSomeCharts([TimerTrigger("0 45 2 * * *")] TimerInfo timerInfo,
+        public static async Task SendDailySummary(
+            [TimerTrigger("0 0 5 * * *")] TimerInfo timerInfo,
             ILogger log)
         {
-            Console.WriteLine("SendSomeCharts");
-
             string cosmosEndpoint
                 = Environment.GetEnvironmentVariable("CosmosEndpointUri");
             string cosmosKey
@@ -197,12 +207,17 @@ namespace PhotoWebhooks
 
             string chartURL = Charting.Make7DayLineChart(results);
 
-            htmlResults.Append("<table><thead><tr><th scope='col'>Date</th><th scope='col'>Views</th></tr><tbody>");
+            htmlResults.Append("<table><thead><tr>" + 
+                "<th scope='col'>Date</th><th scope='col'>Views</th>" + 
+                "</tr><tbody>");
+
             plainResults.Append("Date, Views\n");
 
             foreach (var row in results)
             {
-                htmlResults.Append($"<tr><td>{row.Key}</td><td>{row.Value}</td></tr>");
+                htmlResults.Append($"<tr><td>{row.Key}</td>" +
+                    $"<td>{row.Value}</td></tr>");
+
                 plainResults.Append($" - {row.Key}, {row.Value}\n");
             }
 
@@ -211,20 +226,23 @@ namespace PhotoWebhooks
 
             string htmlMessage = "<html><body><h1>Site Stats</h1>" +
                 $"<p>Stats as of {currentDateTime}</p>" +
-                $"<p><img style='background-color:white' src='{chartURL}' width=800 height=300></p>" 
+                "<p><img style='background-color:white' " +
+                $"src='{chartURL}' width=800 height=300></p>" 
                 + htmlResults.ToString() + "</body></html>";
 
             string plainMessage = "Site Stats\n\n" +
-                $"Stats as of {currentDateTime}\n\n" + plainResults.ToString() + "\n\n"
+                $"Stats as of {currentDateTime}\n\n" + 
+                plainResults.ToString() + "\n\n"
                 + $"Chart available at: {chartURL}";
 
             EmailRecipients recipients = new EmailRecipients();
 
             recipients.To.Add(
-            new EmailAddress(Environment.GetEnvironmentVariable("SendAnalyticsReportsTo"), Environment.GetEnvironmentVariable("SendAnalyticsReportsName")));
+            new EmailAddress(
+                Environment.GetEnvironmentVariable("SendAnalyticsReportsTo"), 
+                Environment.GetEnvironmentVariable("SendAnalyticsReportsName")));
 
-            EmailContent content
-                = new EmailContent("Site Stats");
+            EmailContent content = new EmailContent("Site Stats");
             content.PlainText = plainMessage;
             content.Html = htmlMessage;
 
@@ -288,7 +306,8 @@ namespace PhotoWebhooks
             options.Expires = DateTimeOffset.UtcNow.AddHours(4);
             options.Secure = true;
             options.SameSite = SameSiteMode.Strict;
-            req.HttpContext.Response.Cookies.Append("visit", visit, options);
+            req.HttpContext.Response
+                .Cookies.Append("visit", visit, options);
 
             if (req.Cookies.ContainsKey("visitor"))
             {
@@ -298,8 +317,10 @@ namespace PhotoWebhooks
             {
                 request.newVisitor = true;
                 visitor = Guid.NewGuid().ToString();
-                options.Expires = DateTimeOffset.UtcNow.AddYears(4);
-                req.HttpContext.Response.Cookies.Append("visitor", visitor, options);
+                options.Expires = DateTimeOffset
+                    .UtcNow.AddYears(4);
+                req.HttpContext.Response
+                    .Cookies.Append("visitor", visitor, options);
             }
 
             request.visit = visit;

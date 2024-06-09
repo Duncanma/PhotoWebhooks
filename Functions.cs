@@ -104,17 +104,33 @@ namespace PhotoWebhooks
                         var lineItem = lineItems.First();
                         var productId = lineItem.Price.ProductId;
                         var customerEmail = sessionWithLineItems.CustomerDetails.Email;
-                        var customerName = sessionWithLineItems.CustomerDetails.Name;
-                        if (customerName == null) { 
-                            customerName = customerEmail; 
-                        }
-                        IncomingOrder order 
-                            = new IncomingOrder() { 
-                                CustomerEmail = customerEmail, 
-                                CustomerName = customerName, 
-                                ProductId = productId };
+                        var customerName = sessionWithLineItems.CustomerDetails.Name ?? customerEmail;
+
+                        IncomingOrder order
+                            = new IncomingOrder()
+                            {
+                                CustomerEmail = customerEmail,
+                                CustomerName = customerName,
+                                ProductId = productId,
+                                SessionID = session.Id,
+                                EventID = stripeEvent.Id
+                            };
                         string message = JsonSerializer.Serialize(order);
-                        await queueClient.SendMessageAsync(message);
+
+                        OrderData data = await CreateOrderData();
+
+                        bool exists = await data.checkForExisting("checkoutComplete", order.SessionID);
+
+                        if (!exists)
+                        {
+                            await queueClient.SendMessageAsync(message);
+                        }
+                        else
+                        {                            
+                            log.LogInformation($"Duplicate Event: {order.EventID}");
+                        }
+
+                        await data.InsertLogItem("checkoutComplete", order.SessionID, order.EventID, exists);
                     }
                     else
                     {
@@ -144,6 +160,17 @@ namespace PhotoWebhooks
 
         }
 
+        private static async Task<OrderData> CreateOrderData()
+        {
+            string cosmosEndpoint
+                = Environment.GetEnvironmentVariable("CosmosEndpointUri");
+            string cosmosKey
+                = Environment.GetEnvironmentVariable("CosmosPrimaryKey");
+
+            OrderData data = new OrderData(cosmosEndpoint, cosmosKey);
+            await data.Init();
+            return data;
+        }
 
         [FunctionName("ProcessOrder")]
         public static async Task processOrder(
@@ -169,6 +196,16 @@ namespace PhotoWebhooks
 
             log.LogInformation(
                 $"Process Order Called : {order.ProductId} {order.CustomerEmail}");
+
+            OrderData data = await CreateOrderData();
+
+            bool exists = await data.checkForExisting("processOrder", order.SessionID);
+
+            if (exists)
+            {
+                log.LogInformation($"Duplicate Event: {order.SessionID}");
+                return;
+            }
 
             //fetch image blob
             string imageFile = $"{order.ProductId}.jpg";
@@ -199,6 +236,7 @@ namespace PhotoWebhooks
 
             string message = JsonSerializer.Serialize(order);
             await queueClient.SendMessageAsync(message);
+            await data.InsertLogItem("processOrder", order.SessionID, order.EventID, exists);
         }
 
 
@@ -214,6 +252,16 @@ namespace PhotoWebhooks
 
             log.LogInformation(
                 $"Request to send message: {order.ProductId} {order.CustomerEmail}");
+
+            OrderData data = await CreateOrderData();
+
+            bool exists = await data.checkForExisting("sendLink", order.SessionID);
+
+            if (exists)
+            {
+                log.LogInformation($"Duplicate Event: {order.SessionID}");
+                return;
+            }
 
             string connectionString 
                 = Environment.GetEnvironmentVariable("EmailServiceConnectionString");
@@ -262,6 +310,8 @@ namespace PhotoWebhooks
 
             log.LogInformation(
                 $"Message sent: {order.ProductId} {order.CustomerEmail}");
+            await data.InsertLogItem("sendLink", order.SessionID, order.EventID, exists);
+
         }
     }
 }

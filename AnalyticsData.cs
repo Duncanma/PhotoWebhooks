@@ -1,13 +1,12 @@
 ﻿using Microsoft.Azure.Cosmos;
-using System.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using Microsoft.AspNetCore.JsonPatch.Internal;
+using System.Threading.Tasks;
 
 namespace PhotoWebhooks
 {
 
-    internal class DataStorage
+    internal class AnalyticsData
     {
         // The Cosmos client instance
         private CosmosClient cosmosClient;
@@ -26,7 +25,7 @@ namespace PhotoWebhooks
         private string viewsByDate = "ViewsByDate";
         private string viewsByPath = "ViewsByPathByDate";
 
-        public DataStorage(string endpointURI, string cosmosKey )
+        public AnalyticsData(string endpointURI, string cosmosKey )
         {
             // Create a new instance of the Cosmos Client
             this.cosmosClient = new CosmosClient(endpointURI, cosmosKey, new CosmosClientOptions() { ApplicationName = "AnalyticsWebhooks" });

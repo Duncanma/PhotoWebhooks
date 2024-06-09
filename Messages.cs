@@ -12,5 +12,7 @@ namespace PhotoWebhooks
         public string CustomerEmail { get; set; }
         public string CustomerName { get; set; }
         public string ImageURL { get; set; }
+        public string SessionID { get; set; }
+        public string EventID { get; set; }
     }
 }

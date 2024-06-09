@@ -56,8 +56,6 @@ namespace PhotoWebhooks
                     = new QueueClient(connectionString, 
                     analyticsEvent, queueClientOptions);
 
-                //queueClient.CreateIfNotExists();
-
                 RequestRecord request = CreateRequestRecordFromRequest(req, log);
 
                 if (!FunctionsHelpers.RequestIsCrawler(request) 
@@ -132,7 +130,7 @@ namespace PhotoWebhooks
                 string cosmosKey
                     = Environment.GetEnvironmentVariable("CosmosPrimaryKey");
 
-                DataStorage data = new DataStorage(cosmosEndpoint, cosmosKey);
+                AnalyticsData data = new AnalyticsData(cosmosEndpoint, cosmosKey);
 
                 await data.Init();
                 await data.CreateRequestItem(request);
@@ -154,7 +152,7 @@ namespace PhotoWebhooks
             string cosmosKey
                 = Environment.GetEnvironmentVariable("CosmosPrimaryKey");
 
-            DataStorage data = new DataStorage(cosmosEndpoint, cosmosKey);
+            AnalyticsData data = new AnalyticsData(cosmosEndpoint, cosmosKey);
 
             await data.Init();
             await data.GetAndSaveViewsByDate("day");
@@ -173,7 +171,7 @@ namespace PhotoWebhooks
             string cosmosKey
                 = Environment.GetEnvironmentVariable("CosmosPrimaryKey");
 
-            DataStorage data = new DataStorage(cosmosEndpoint, cosmosKey);
+            AnalyticsData data = new AnalyticsData(cosmosEndpoint, cosmosKey);
 
             await data.Init();
             await data.GetAndSaveViewsByPathByDate("day");
@@ -190,7 +188,7 @@ namespace PhotoWebhooks
             string cosmosKey
                 = Environment.GetEnvironmentVariable("CosmosPrimaryKey");
 
-            DataStorage data = new DataStorage(cosmosEndpoint, cosmosKey);
+            AnalyticsData data = new AnalyticsData(cosmosEndpoint, cosmosKey);
 
             await data.Init();
             var results = await data.GetViewsByDay(-7);

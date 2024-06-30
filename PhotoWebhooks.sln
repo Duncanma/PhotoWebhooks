@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PhotoWebhooks", "PhotoWebho
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UAParser", "..\uap-csharp\UAParser\UAParser.csproj", "{E58983AC-CBB0-4FC7-8365-24194940C4C9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoWebhooksTests", "..\PhotoWebhooksTests\PhotoWebhooksTests.csproj", "{421AAFDB-FF5B-4B7E-89A7-C91FD5AD4657}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PhotoWebhooksTests", "PhotoWebhooksTests\PhotoWebhooksTests.csproj", "{FF0F5581-4645-4DD7-AB52-B0793DF536FE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +23,10 @@ Global
 		{E58983AC-CBB0-4FC7-8365-24194940C4C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E58983AC-CBB0-4FC7-8365-24194940C4C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E58983AC-CBB0-4FC7-8365-24194940C4C9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{421AAFDB-FF5B-4B7E-89A7-C91FD5AD4657}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{421AAFDB-FF5B-4B7E-89A7-C91FD5AD4657}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{421AAFDB-FF5B-4B7E-89A7-C91FD5AD4657}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{421AAFDB-FF5B-4B7E-89A7-C91FD5AD4657}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF0F5581-4645-4DD7-AB52-B0793DF536FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF0F5581-4645-4DD7-AB52-B0793DF536FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF0F5581-4645-4DD7-AB52-B0793DF536FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF0F5581-4645-4DD7-AB52-B0793DF536FE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

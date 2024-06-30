@@ -5,17 +5,22 @@
     <UserSecretsId>a247a877-ac14-4c30-b18c-f08f203a5641</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="PhotoWebhooksTests\**" />
+    <EmbeddedResource Remove="PhotoWebhooksTests\**" />
+    <None Remove="PhotoWebhooksTests\**" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Azure.Communication.Email" Version="1.0.1" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.20.0" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.18.0" />
-    <PackageReference Include="MaxMind.GeoIP2" Version="5.1.0" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.40.0" />
+    <PackageReference Include="MaxMind.GeoIP2" Version="5.2.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.41.0" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.3.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.61.1" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.61.3" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.4.0" />
     <PackageReference Include="QuickChart" Version="2.3.0" />
-    <PackageReference Include="Stripe.net" Version="44.9.0" />
+    <PackageReference Include="Stripe.net" Version="45.1.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\uap-csharp\UAParser\UAParser.csproj" />

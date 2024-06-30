@@ -65,16 +65,6 @@ namespace PhotoWebhooks
             await this.c_viewEvents.CreateItemAsync<RequestRecord>(request, new PartitionKey(request.day));
         }
 
-        public async Task CreateViewByDate(ViewsByDate viewByDate)
-        {
-            await this.c_viewsByDate.CreateItemAsync<ViewsByDate>(viewByDate, new PartitionKey(viewByDate.dateType));
-        }
-
-        public async Task CreateViewByPathByDate(ViewsByPathByDate viewsByPathByDate)
-        {
-            await this.c_viewsByPathByDate.CreateItemAsync<ViewsByPathByDate>(viewsByPathByDate, new PartitionKey(viewsByPathByDate.dateType));
-        }
-
         public async Task<Dictionary<string, string>> GetViewsByDay(int days)
         {
             Dictionary<string, string> results 
@@ -105,19 +95,38 @@ namespace PhotoWebhooks
             return results;
         }
 
-        public async Task GetAndSaveViewsByDate(string dateType)
+        public async Task GetAndSaveViewsByDate(string dateType, bool allTime = false)
         {
             string query = "";
             if (dateType == "day") {
-                query = "SELECT @dateType as dateType, c.day as id, " + 
-                    "count(1) as views FROM c WHERE c.day > @firstDay GROUP BY c.day " + 
-                    "ORDER by c.day offset 0 limit 8";
+                
+                if (allTime)
+                {
+                    query = "SELECT @dateType as dateType, c.day as id, " +
+                        "count(1) as views FROM c WHERE c.isSpider = false GROUP BY c.day " +
+                        "ORDER by c.day";
+                }
+                else
+                {
+                    query = "SELECT @dateType as dateType, c.day as id, " +
+                        "count(1) as views FROM c WHERE c.day > @firstDay AND c.isSpider = false GROUP BY c.day " +
+                        "ORDER by c.day offset 0 limit 8";
+                }
             }
-            QueryDefinition q = new QueryDefinition(query)
+            QueryDefinition q;
+            
+            if (allTime)
+            {
+                q = new QueryDefinition(query)
+                .WithParameter("@dateType", "day");
+            } else {
+                q = new QueryDefinition(query)
                 .WithParameter("@dateType", "day")
                 .WithParameter("@firstDay", DateTimeOffset.Now.AddDays(-8).ToString("yyyyMMdd"));
 
+            }
 
+            int count = 0;
             using (FeedIterator<ViewsByDate> feedIterator 
                 = this.c_viewEvents.GetItemQueryIterator<ViewsByDate>(
                 q))
@@ -128,10 +137,12 @@ namespace PhotoWebhooks
                         = await feedIterator.ReadNextAsync();
                     foreach (var item in response)
                     {
+                        count++;
                         await this.c_viewsByDate.UpsertItemAsync(item);
                     }
                 }
             }
+            Console.WriteLine($"{count} records written");
         }
 
 
@@ -140,7 +151,7 @@ namespace PhotoWebhooks
             string query = "";
             if (dateType == "day")
             {
-                query = "SELECT @dateType as dateType, c.day, c.page, count(1) as views FROM c WHERE c.day > @firstDay GROUP BY c.day, c.page ORDER BY c.day desc";
+                query = "SELECT @dateType as dateType, c.day, c.page, count(1) as views FROM c WHERE c.day > @firstDay AND c.isSpider = false GROUP BY c.day, c.page ORDER BY c.day desc";
             }
 
             QueryDefinition q = new QueryDefinition(query)

@@ -66,7 +66,7 @@ namespace PhotoWebhooks
         }
         // </CreateDatabaseAsync>
 
-        public async Task InsertLogItem(string functionName, 
+        public async Task insertLogItem(string functionName, 
             string sessionID, string eventID, bool duplicate)
         {
             LogItem item = new LogItem() 

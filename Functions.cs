@@ -130,7 +130,7 @@ namespace PhotoWebhooks
                             log.LogInformation($"Duplicate Event: {order.EventID}");
                         }
 
-                        await data.InsertLogItem("checkoutComplete", order.SessionID, order.EventID, exists);
+                        await data.insertLogItem("checkoutComplete", order.SessionID, order.EventID, exists);
                     }
                     else
                     {
@@ -236,7 +236,7 @@ namespace PhotoWebhooks
 
             string message = JsonSerializer.Serialize(order);
             await queueClient.SendMessageAsync(message);
-            await data.InsertLogItem("processOrder", order.SessionID, order.EventID, exists);
+            await data.insertLogItem("processOrder", order.SessionID, order.EventID, exists);
         }
 
 
@@ -310,7 +310,7 @@ namespace PhotoWebhooks
 
             log.LogInformation(
                 $"Message sent: {order.ProductId} {order.CustomerEmail}");
-            await data.InsertLogItem("sendLink", order.SessionID, order.EventID, exists);
+            await data.insertLogItem("sendLink", order.SessionID, order.EventID, exists);
 
         }
     }

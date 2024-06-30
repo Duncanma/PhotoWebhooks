@@ -10,7 +10,7 @@ namespace PhotoWebhooks
 {
     public static class Charting
     {
-        public static string Make7DayLineChart(Dictionary<string, string> data)
+        public static string MakeViewLineChart(Dictionary<string, string> data)
         {
             Chart qc = new Chart();
 
@@ -45,7 +45,8 @@ namespace PhotoWebhooks
 							+ @"], datasets: [{label: 'Recent Views', backgroundColor: '#6371ff', borderColor: '#6371ff', data: ["
 							+ range + @"], fill: false, lineTension: 0.3 }, ], }, options: { scales: { y: { min: 0, max: " + maxY.ToString() + " }, x: { offset:true} }, " +
 						    @"plugins: { datalabels: { anchor: 'center', align: 'center', color: '#000', backgroundColor: '#bbb', " +
-							@"borderColor: '#000', borderWidth: 1, borderRadius: 5, },}, title: { display: true, text: 'Past 7 days of views', },},}";
+							@"borderColor: '#000', borderWidth: 1, borderRadius: 5, },}," +
+                            @"title: { display: true, text: 'Past " + data.Values.Count + "days of views', },},}";
             qc.Config = jsonData;
 			// Get the URL
 			return qc.GetUrl();

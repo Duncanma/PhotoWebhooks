@@ -203,7 +203,7 @@ namespace PhotoWebhooks
             StringBuilder htmlResults = new StringBuilder();
             StringBuilder plainResults = new StringBuilder();
 
-            string chartURL = Charting.Make7DayLineChart(results);
+            string chartURL = Charting.MakeViewLineChart(results);
 
             htmlResults.Append("<table><thead><tr>" + 
                 "<th scope='col'>Date</th><th scope='col'>Views</th>" + 

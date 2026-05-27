@@ -8,6 +8,7 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -251,6 +252,145 @@ namespace PhotoWebhooks
             await emailClient.SendAsync(WaitUntil.Started, messageToSend);
         }
 
+        [FunctionName("StatsTimeSeries")]
+        public static async Task<IActionResult> StatsTimeSeries(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "stats/timeseries")] HttpRequest req,
+            ILogger log)
+        {
+            if (!TryAuthorizeStatsRequest(req, out IActionResult unauthorizedResult))
+            {
+                return unauthorizedResult;
+            }
+
+            string grain = GetQueryValue(req, "grain", "day");
+            DateTimeOffset endDate = ParseDateOrDefault(req, "end", DateTimeOffset.UtcNow);
+            DateTimeOffset startDate = ParseDateOrDefault(req, "start", endDate.AddDays(-30));
+
+            AnalyticsData data = await CreateAnalyticsData();
+            var rows = await data.GetViewsTimeSeries(
+                grain,
+                AnalyticsData.NormalizeDay(startDate),
+                AnalyticsData.NormalizeDay(endDate));
+
+            return new OkObjectResult(rows);
+        }
+
+        [FunctionName("StatsTopPages")]
+        public static async Task<IActionResult> StatsTopPages(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "stats/top-pages")] HttpRequest req,
+            ILogger log)
+        {
+            if (!TryAuthorizeStatsRequest(req, out IActionResult unauthorizedResult))
+            {
+                return unauthorizedResult;
+            }
+
+            DateTimeOffset endDate = ParseDateOrDefault(req, "end", DateTimeOffset.UtcNow);
+            DateTimeOffset startDate = ParseDateOrDefault(req, "start", endDate.AddDays(-30));
+            int limit = ParseIntOrDefault(req, "limit", 20);
+
+            AnalyticsData data = await CreateAnalyticsData();
+            var rows = await data.GetTopPages(
+                AnalyticsData.NormalizeDay(startDate),
+                AnalyticsData.NormalizeDay(endDate),
+                limit);
+
+            return new OkObjectResult(rows);
+        }
+
+        [FunctionName("StatsReferrers")]
+        public static async Task<IActionResult> StatsReferrers(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "stats/referrers")] HttpRequest req,
+            ILogger log)
+        {
+            if (!TryAuthorizeStatsRequest(req, out IActionResult unauthorizedResult))
+            {
+                return unauthorizedResult;
+            }
+
+            DateTimeOffset endDate = ParseDateOrDefault(req, "end", DateTimeOffset.UtcNow);
+            DateTimeOffset startDate = ParseDateOrDefault(req, "start", endDate.AddDays(-30));
+            int limit = ParseIntOrDefault(req, "limit", 20);
+
+            AnalyticsData data = await CreateAnalyticsData();
+            var rows = await data.GetViewsByReferrer(
+                AnalyticsData.NormalizeDay(startDate),
+                AnalyticsData.NormalizeDay(endDate),
+                limit);
+
+            return new OkObjectResult(rows);
+        }
+
+        [FunctionName("StatsCountries")]
+        public static async Task<IActionResult> StatsCountries(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "stats/countries")] HttpRequest req,
+            ILogger log)
+        {
+            if (!TryAuthorizeStatsRequest(req, out IActionResult unauthorizedResult))
+            {
+                return unauthorizedResult;
+            }
+
+            DateTimeOffset endDate = ParseDateOrDefault(req, "end", DateTimeOffset.UtcNow);
+            DateTimeOffset startDate = ParseDateOrDefault(req, "start", endDate.AddDays(-30));
+            int limit = ParseIntOrDefault(req, "limit", 20);
+
+            AnalyticsData data = await CreateAnalyticsData();
+            var rows = await data.GetViewsByCountry(
+                AnalyticsData.NormalizeDay(startDate),
+                AnalyticsData.NormalizeDay(endDate),
+                limit);
+
+            return new OkObjectResult(rows);
+        }
+
+        [FunctionName("StatsSegments")]
+        public static async Task<IActionResult> StatsSegments(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "stats/segments")] HttpRequest req,
+            ILogger log)
+        {
+            if (!TryAuthorizeStatsRequest(req, out IActionResult unauthorizedResult))
+            {
+                return unauthorizedResult;
+            }
+
+            DateTimeOffset endDate = ParseDateOrDefault(req, "end", DateTimeOffset.UtcNow);
+            DateTimeOffset startDate = ParseDateOrDefault(req, "start", endDate.AddDays(-30));
+            int limit = ParseIntOrDefault(req, "limit", 10);
+
+            AnalyticsData data = await CreateAnalyticsData();
+            var summary = await data.GetSegments(
+                AnalyticsData.NormalizeDay(startDate),
+                AnalyticsData.NormalizeDay(endDate),
+                limit);
+
+            return new OkObjectResult(summary);
+        }
+
+        [FunctionName("ComputeViewsByReferrerByDay")]
+        [FixedDelayRetry(5, "00:00:10")]
+        public static async Task ComputeViewsByReferrerByDay(
+            [TimerTrigger("0 30 4 * * *")] TimerInfo timerInfo,
+            ILogger log)
+        {
+            Console.WriteLine("ComputeViewsByReferrerByDay");
+
+            AnalyticsData data = await CreateAnalyticsData();
+            await data.GetAndSaveViewsByReferrerByDate("day");
+        }
+
+        [FunctionName("ComputeViewsByCountryByDay")]
+        [FixedDelayRetry(5, "00:00:10")]
+        public static async Task ComputeViewsByCountryByDay(
+            [TimerTrigger("0 45 4 * * *")] TimerInfo timerInfo,
+            ILogger log)
+        {
+            Console.WriteLine("ComputeViewsByCountryByDay");
+
+            AnalyticsData data = await CreateAnalyticsData();
+            await data.GetAndSaveViewsByCountryByDate("day");
+        }
+
         private static RequestRecord CreateRequestRecordFromRequest(HttpRequest req, ILogger log)
         {
             RequestRecord request = new RequestRecord();
@@ -330,6 +470,79 @@ namespace PhotoWebhooks
         {
             return (req.Headers["X-Forwarded-For"]
                  .FirstOrDefault() ?? "").Split(new char[] { ':' }).FirstOrDefault();
+        }
+
+        private static async Task<AnalyticsData> CreateAnalyticsData()
+        {
+            string cosmosEndpoint = Environment.GetEnvironmentVariable("CosmosEndpointUri");
+            string cosmosKey = Environment.GetEnvironmentVariable("CosmosPrimaryKey");
+            AnalyticsData data = new AnalyticsData(cosmosEndpoint, cosmosKey);
+            await data.Init();
+            return data;
+        }
+
+        private static bool TryAuthorizeStatsRequest(HttpRequest req, out IActionResult response)
+        {
+            response = null;
+            string expected = Environment.GetEnvironmentVariable("AnalyticsDashboardSecret");
+            if (string.IsNullOrWhiteSpace(expected))
+            {
+                response = new ObjectResult("AnalyticsDashboardSecret is not configured.")
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError
+                };
+                return false;
+            }
+
+            string provided = req.Headers["X-Analytics-Secret"].FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(provided) && req.Query.ContainsKey("secret"))
+            {
+                provided = req.Query["secret"].ToString();
+            }
+
+            if (!string.Equals(expected, provided, StringComparison.Ordinal))
+            {
+                response = new UnauthorizedObjectResult("Missing or invalid analytics secret.");
+                return false;
+            }
+
+            return true;
+        }
+
+        private static string GetQueryValue(HttpRequest req, string key, string defaultValue)
+        {
+            if (req.Query.ContainsKey(key))
+            {
+                string value = req.Query[key].ToString();
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            return defaultValue;
+        }
+
+        private static DateTimeOffset ParseDateOrDefault(HttpRequest req, string key, DateTimeOffset fallback)
+        {
+            string value = GetQueryValue(req, key, string.Empty);
+            if (DateTimeOffset.TryParse(value, out DateTimeOffset parsed))
+            {
+                return parsed;
+            }
+
+            return fallback;
+        }
+
+        private static int ParseIntOrDefault(HttpRequest req, string key, int fallback)
+        {
+            string value = GetQueryValue(req, key, string.Empty);
+            if (int.TryParse(value, out int parsed))
+            {
+                return Math.Max(1, parsed);
+            }
+
+            return fallback;
         }
 
     }

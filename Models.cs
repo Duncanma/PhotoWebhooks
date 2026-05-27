@@ -1,5 +1,6 @@
 ﻿using Microsoft.WindowsAzure.Storage.Table;
 using System;
+using System.Collections.Generic;
 
 
 namespace PhotoWebhooks
@@ -51,6 +52,47 @@ namespace PhotoWebhooks
         public string day { get; set; } 
         public string page { get; set; }
         public string views { get; set; }
+    }
+
+    public class ViewsByReferrerByDate
+    {
+        public string dateType { get; set; } // partition key
+        public string id { get; set; } // referrer+day, unique per partition
+        public string day { get; set; }
+        public string referrer { get; set; }
+        public string views { get; set; }
+    }
+
+    public class ViewsByCountryByDate
+    {
+        public string dateType { get; set; } // partition key
+        public string id { get; set; } // country+day, unique per partition
+        public string day { get; set; }
+        public string country { get; set; }
+        public string countryName { get; set; }
+        public string views { get; set; }
+    }
+
+    public class StatsTimeSeriesPoint
+    {
+        public string period { get; set; }
+        public int views { get; set; }
+    }
+
+    public class StatsKeyValue
+    {
+        public string key { get; set; }
+        public int views { get; set; }
+    }
+
+    public class StatsSegmentSummary
+    {
+        public int newVisitors { get; set; }
+        public int returningVisitors { get; set; }
+        public int jsEnabled { get; set; }
+        public int noJs { get; set; }
+        public List<StatsKeyValue> browsers { get; set; } = new();
+        public List<StatsKeyValue> devices { get; set; } = new();
     }
 
 

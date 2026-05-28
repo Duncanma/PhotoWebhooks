@@ -137,6 +137,7 @@ namespace PhotoWebhooks
                         = await feedIterator.ReadNextAsync();
                     foreach (var item in response)
                     {
+                        Console.WriteLine(item.id);
                         count++;
                         await this.c_viewsByDate.UpsertItemAsync(item);
                     }

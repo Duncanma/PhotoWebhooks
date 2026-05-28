@@ -1,27 +1,18 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Stripe;
-using Stripe.Checkout;
-using System.Web.Http;
-using System.Linq;
-using Azure.Storage.Queues;
-using System.Text.Json;
 using Azure;
 using Azure.Communication.Email;
 using Azure.Storage.Blobs;
-using MaxMind.GeoIP2;
-using System.Configuration;
-using Stripe.Climate;
-using System.Text;
-using static System.Formats.Asn1.AsnWriter;
-using System.Drawing;
-using System.Threading;
+using Azure.Storage.Queues;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.Logging;
+using Stripe;
+using Stripe.Checkout;
+using System;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 
 
@@ -44,7 +35,7 @@ namespace PhotoWebhooks
         }
 
 
-        [FunctionName("CheckoutComplete")]
+        [Function("CheckoutComplete")]
         public static async Task<IActionResult> checkoutComplete(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
             ILogger log)
@@ -153,7 +144,7 @@ namespace PhotoWebhooks
                 log.LogError(e.Message);
                 Console.WriteLine(e.Message);
 
-                return new BadRequestErrorMessageResult(e.Message);
+                return new BadRequestResult();
             }
             //any other exception will throw,
             //which is desired behaviour (returns a 500, etc.)
@@ -172,7 +163,7 @@ namespace PhotoWebhooks
             return data;
         }
 
-        [FunctionName("ProcessOrder")]
+        [Function("ProcessOrder")]
         public static async Task processOrder(
             [QueueTrigger(
                 incomingQueue, 
@@ -240,7 +231,7 @@ namespace PhotoWebhooks
         }
 
 
-        [FunctionName("SendLink")]
+        [Function("SendLink")]
         public static async Task sendLink(
             [QueueTrigger(sendEmailQueue, 
             Connection = "AZURE_STORAGE_CONNECTION_STRING")

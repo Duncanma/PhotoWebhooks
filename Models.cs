@@ -1,8 +1,4 @@
-﻿using Microsoft.WindowsAzure.Storage.Table;
-using System;
-
-
-namespace PhotoWebhooks
+﻿namespace PhotoWebhooks
 {
     public class RequestRecord
     {

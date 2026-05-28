@@ -4,14 +4,13 @@ using Azure;
 using MaxMind.GeoIP2;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Text.Json;
+using Microsoft.Azure.Functions.Worker;
 
 namespace PhotoWebhooks
 {
@@ -33,9 +32,7 @@ namespace PhotoWebhooks
 
         }
 
-        [FunctionName("event")]
-        [ResponseCache(Duration = 3600, 
-            Location = ResponseCacheLocation.Client)]
+        [Function("event")]
         public static async Task<IActionResult> trackAnalyticsEvent(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
             ILogger log)
@@ -65,7 +62,7 @@ namespace PhotoWebhooks
                     await queueClient.SendMessageAsync(message);
                 }
 
-                req.HttpContext.Response.Headers.Add("Cache-Control", "private, max-age=300");
+                req.HttpContext.Response.Headers.Append("Cache-Control", "private, max-age=300");
                 var pxImg = new FileContentResult(TrackingGif, "image/gif");
                 return pxImg;
             }
@@ -76,7 +73,7 @@ namespace PhotoWebhooks
             }
         }
 
-        [FunctionName("ProcessEvent")]
+        [Function("ProcessEvent")]
         public static async Task processEvent(
             [QueueTrigger(
                 analyticsEvent,
@@ -89,7 +86,7 @@ namespace PhotoWebhooks
 
             if (request != null)
             {
-                if (request.country == null)
+                if (request.country == null && !String.IsNullOrEmpty(request.ip_address))
                 {
                     var maxMindAccountID 
                         = Environment.GetEnvironmentVariable("MaxMindAccountID");
@@ -139,10 +136,10 @@ namespace PhotoWebhooks
 
         //0 */5 * * * *
         //0 30 0 * * *
-        [FunctionName("ComputeViewsByDay")]
+        [Function("ComputeViewsByDay")]
         [FixedDelayRetry(5, "00:00:10")]
         public static async Task ComputeViewsByDay(
-            [TimerTrigger("0 30 3 * * *")] TimerInfo timerInfo,
+            [TimerTrigger("0 30 0 * * *")] TimerInfo timerInfo,
             ILogger log)
         {
             Console.WriteLine("ComputeViewsByDay");
@@ -159,7 +156,7 @@ namespace PhotoWebhooks
         }
 
         //0 */5 * * * *
-        [FunctionName("ComputeViewsByPathByDay")]
+        [Function("ComputeViewsByPathByDay")]
         [FixedDelayRetry(5, "00:00:10")]
         public static async Task ComputeViewsByPathByDay([TimerTrigger("0 0 4 * * *")] TimerInfo timerInfo,
             ILogger log)
@@ -177,7 +174,7 @@ namespace PhotoWebhooks
             await data.GetAndSaveViewsByPathByDate("day");
         }
 
-        [FunctionName("SendDailySummary")]
+        [Function("SendDailySummary")]
         [FixedDelayRetry(5, "00:00:10")]
         public static async Task SendDailySummary(
             [TimerTrigger("0 0 5 * * *")] TimerInfo timerInfo,

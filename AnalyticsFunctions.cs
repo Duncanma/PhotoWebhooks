@@ -250,7 +250,7 @@ namespace PhotoWebhooks
             await emailClient.SendAsync(WaitUntil.Started, messageToSend);
         }
 
-        [FunctionName("StatsTimeSeries")]
+        [Function("StatsTimeSeries")]
         public static async Task<IActionResult> StatsTimeSeries(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "stats/timeseries")] HttpRequest req,
             ILogger log)
@@ -273,7 +273,7 @@ namespace PhotoWebhooks
             return new OkObjectResult(rows);
         }
 
-        [FunctionName("StatsTopPages")]
+        [Function("StatsTopPages")]
         public static async Task<IActionResult> StatsTopPages(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "stats/top-pages")] HttpRequest req,
             ILogger log)
@@ -296,7 +296,7 @@ namespace PhotoWebhooks
             return new OkObjectResult(rows);
         }
 
-        [FunctionName("StatsReferrers")]
+        [Function("StatsReferrers")]
         public static async Task<IActionResult> StatsReferrers(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "stats/referrers")] HttpRequest req,
             ILogger log)
@@ -319,7 +319,7 @@ namespace PhotoWebhooks
             return new OkObjectResult(rows);
         }
 
-        [FunctionName("StatsCountries")]
+        [Function("StatsCountries")]
         public static async Task<IActionResult> StatsCountries(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "stats/countries")] HttpRequest req,
             ILogger log)
@@ -342,7 +342,7 @@ namespace PhotoWebhooks
             return new OkObjectResult(rows);
         }
 
-        [FunctionName("StatsSegments")]
+        [Function("StatsSegments")]
         public static async Task<IActionResult> StatsSegments(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "stats/segments")] HttpRequest req,
             ILogger log)
@@ -365,7 +365,7 @@ namespace PhotoWebhooks
             return new OkObjectResult(summary);
         }
 
-        [FunctionName("ComputeViewsByReferrerByDay")]
+        [Function("ComputeViewsByReferrerByDay")]
         [FixedDelayRetry(5, "00:00:10")]
         public static async Task ComputeViewsByReferrerByDay(
             [TimerTrigger("0 30 4 * * *")] TimerInfo timerInfo,
@@ -377,7 +377,7 @@ namespace PhotoWebhooks
             await data.GetAndSaveViewsByReferrerByDate("day");
         }
 
-        [FunctionName("ComputeViewsByCountryByDay")]
+        [Function("ComputeViewsByCountryByDay")]
         [FixedDelayRetry(5, "00:00:10")]
         public static async Task ComputeViewsByCountryByDay(
             [TimerTrigger("0 45 4 * * *")] TimerInfo timerInfo,

@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.Json;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.WebJobs;
 
 namespace PhotoWebhooks
 {

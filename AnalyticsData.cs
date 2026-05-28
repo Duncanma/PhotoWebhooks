@@ -88,34 +88,29 @@ namespace PhotoWebhooks
 
         public async Task GetAndSaveViewsByDate(string dateType, bool allTime = false)
         {
-            string query = "";
-            if (dateType == "day") {
-                
-                if (allTime)
-                {
-                    query = "SELECT @dateType as dateType, c.day as id, " +
-                        "count(1) as views FROM c WHERE c.isSpider = false GROUP BY c.day " +
-                        "ORDER by c.day";
-                }
-                else
-                {
-                    query = "SELECT @dateType as dateType, c.day as id, " +
-                        "count(1) as views FROM c WHERE c.day > @firstDay AND c.isSpider = false GROUP BY c.day " +
-                        "ORDER by c.day offset 0 limit 8";
-                }
-            }
-            QueryDefinition q;
-            
             if (allTime)
             {
-                q = new QueryDefinition(query)
-                .WithParameter("@dateType", "day");
-            } else {
-                q = new QueryDefinition(query)
-                .WithParameter("@dateType", "day")
-                .WithParameter("@firstDay", DateTimeOffset.Now.AddDays(-8).ToString("yyyyMMdd"));
-
+                await GetAndSaveViewsByDateRange(dateType, "00000000", "99999999");
+                return;
             }
+
+            string startDay = DateTimeOffset.Now.AddDays(-8).ToString("yyyyMMdd");
+            string endDay = DateTimeOffset.Now.ToString("yyyyMMdd");
+            await GetAndSaveViewsByDateRange(dateType, startDay, endDay);
+        }
+
+        public async Task<int> GetAndSaveViewsByDateRange(string dateType, string startDay, string endDay)
+        {
+            if (dateType != "day") return 0;
+
+            string query = "SELECT @dateType as dateType, c.day as id, " +
+                "count(1) as views FROM c WHERE c.day >= @startDay AND c.day <= @endDay AND c.isSpider = false GROUP BY c.day " +
+                "ORDER by c.day";
+
+            QueryDefinition q = new QueryDefinition(query)
+                .WithParameter("@dateType", dateType)
+                .WithParameter("@startDay", startDay)
+                .WithParameter("@endDay", endDay);
 
             int count = 0;
             using (FeedIterator<ViewsByDate> feedIterator 
@@ -135,21 +130,30 @@ namespace PhotoWebhooks
                 }
             }
             Console.WriteLine($"{count} records written");
+            return count;
         }
 
 
         public async Task GetAndSaveViewsByPathByDate(string dateType)
         {
-            string query = "";
-            if (dateType == "day")
-            {
-                query = "SELECT @dateType as dateType, c.day, c.page, count(1) as views FROM c WHERE c.day > @firstDay AND c.isSpider = false GROUP BY c.day, c.page ORDER BY c.day desc";
-            }
+            string startDay = DateTimeOffset.Now.AddDays(-2).ToString("yyyyMMdd");
+            string endDay = DateTimeOffset.Now.ToString("yyyyMMdd");
+            await GetAndSaveViewsByPathByDateRange(dateType, startDay, endDay);
+        }
+
+        public async Task<int> GetAndSaveViewsByPathByDateRange(string dateType, string startDay, string endDay)
+        {
+            if (dateType != "day") return 0;
+
+            string query = "SELECT @dateType as dateType, c.day, c.page, count(1) as views FROM c " +
+                "WHERE c.day >= @startDay AND c.day <= @endDay AND c.isSpider = false GROUP BY c.day, c.page ORDER BY c.day desc";
 
             QueryDefinition q = new QueryDefinition(query)
                 .WithParameter("@dateType", dateType)
-                .WithParameter("@firstDay", DateTimeOffset.Now.AddDays(-2).ToString("yyyyMMdd"));
-            
+                .WithParameter("@startDay", startDay)
+                .WithParameter("@endDay", endDay);
+
+            int count = 0;
             using (FeedIterator<ViewsByPathByDate> feedIterator = this.c_viewEvents.GetItemQueryIterator<ViewsByPathByDate>(q))
             {
                 while (feedIterator.HasMoreResults)
@@ -157,25 +161,36 @@ namespace PhotoWebhooks
                     FeedResponse<ViewsByPathByDate> response = await feedIterator.ReadNextAsync();
                     foreach (var item in response)
                     {
-                        item.id = item.page.Replace("/", "--") + "::" + item.day;
+                        item.id = (item.page ?? "(unknown)").Replace("/", "--") + "::" + item.day;
                         await this.c_viewsByPathByDate.UpsertItemAsync(item, new PartitionKey(item.dateType));
+                        count++;
                     }
                 }
             }
+            return count;
         }
 
         public async Task GetAndSaveViewsByReferrerByDate(string dateType)
         {
-            if (dateType != "day") return;
+            string startDay = DateTimeOffset.Now.AddDays(-2).ToString("yyyyMMdd");
+            string endDay = DateTimeOffset.Now.ToString("yyyyMMdd");
+            await GetAndSaveViewsByReferrerByDateRange(dateType, startDay, endDay);
+        }
+
+        public async Task<int> GetAndSaveViewsByReferrerByDateRange(string dateType, string startDay, string endDay)
+        {
+            if (dateType != "day") return 0;
 
             string query = "SELECT @dateType as dateType, c.day, c.simple_referrer as referrer, count(1) as views " +
-                "FROM c WHERE c.day > @firstDay AND c.isSpider = false AND IS_DEFINED(c.simple_referrer) AND c.simple_referrer != null " +
+                "FROM c WHERE c.day >= @startDay AND c.day <= @endDay AND c.isSpider = false AND IS_DEFINED(c.simple_referrer) AND c.simple_referrer != null " +
                 "GROUP BY c.day, c.simple_referrer ORDER BY c.day desc";
 
             QueryDefinition q = new QueryDefinition(query)
                 .WithParameter("@dateType", dateType)
-                .WithParameter("@firstDay", DateTimeOffset.Now.AddDays(-2).ToString("yyyyMMdd"));
+                .WithParameter("@startDay", startDay)
+                .WithParameter("@endDay", endDay);
 
+            int count = 0;
             using (FeedIterator<ViewsByReferrerByDate> feedIterator = this.c_viewEvents.GetItemQueryIterator<ViewsByReferrerByDate>(q))
             {
                 while (feedIterator.HasMoreResults)
@@ -185,23 +200,34 @@ namespace PhotoWebhooks
                     {
                         item.id = $"{NormalizeKey(item.referrer)}::{item.day}";
                         await this.c_viewsByReferrerByDate.UpsertItemAsync(item, new PartitionKey(item.dateType));
+                        count++;
                     }
                 }
             }
+            return count;
         }
 
         public async Task GetAndSaveViewsByCountryByDate(string dateType)
         {
-            if (dateType != "day") return;
+            string startDay = DateTimeOffset.Now.AddDays(-2).ToString("yyyyMMdd");
+            string endDay = DateTimeOffset.Now.ToString("yyyyMMdd");
+            await GetAndSaveViewsByCountryByDateRange(dateType, startDay, endDay);
+        }
+
+        public async Task<int> GetAndSaveViewsByCountryByDateRange(string dateType, string startDay, string endDay)
+        {
+            if (dateType != "day") return 0;
 
             string query = "SELECT @dateType as dateType, c.day, c.country, c.countryName, count(1) as views " +
-                "FROM c WHERE c.day > @firstDay AND c.isSpider = false AND IS_DEFINED(c.country) AND c.country != null " +
+                "FROM c WHERE c.day >= @startDay AND c.day <= @endDay AND c.isSpider = false AND IS_DEFINED(c.country) AND c.country != null " +
                 "GROUP BY c.day, c.country, c.countryName ORDER BY c.day desc";
 
             QueryDefinition q = new QueryDefinition(query)
                 .WithParameter("@dateType", dateType)
-                .WithParameter("@firstDay", DateTimeOffset.Now.AddDays(-2).ToString("yyyyMMdd"));
+                .WithParameter("@startDay", startDay)
+                .WithParameter("@endDay", endDay);
 
+            int count = 0;
             using (FeedIterator<ViewsByCountryByDate> feedIterator = this.c_viewEvents.GetItemQueryIterator<ViewsByCountryByDate>(q))
             {
                 while (feedIterator.HasMoreResults)
@@ -211,9 +237,11 @@ namespace PhotoWebhooks
                     {
                         item.id = $"{NormalizeKey(item.country)}::{item.day}";
                         await this.c_viewsByCountryByDate.UpsertItemAsync(item, new PartitionKey(item.dateType));
+                        count++;
                     }
                 }
             }
+            return count;
         }
 
         public async Task<List<StatsTimeSeriesPoint>> GetViewsTimeSeries(string grain, string startDay, string endDay)

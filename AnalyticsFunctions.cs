@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -389,6 +390,92 @@ namespace PhotoWebhooks
             return new OkObjectResult(summary);
         }
 
+        [Function("BackfillAnalytics")]
+        public static async Task<IActionResult> BackfillAnalytics(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "stats/backfill")] HttpRequest req,
+            ILogger? log)
+        {
+            if (!TryAuthorizeStatsRequest(req, out IActionResult unauthorizedResult))
+            {
+                return unauthorizedResult;
+            }
+
+            string startDay = ParseDayOrDefault(req, "start", DateTimeOffset.UtcNow.AddDays(-3));
+            string endDay = ParseDayOrDefault(req, "end", DateTimeOffset.UtcNow);
+            string typesRaw = GetQueryValue(req, "types", "day,path,referrer,country");
+
+            if (string.CompareOrdinal(startDay, endDay) > 0)
+            {
+                return new BadRequestObjectResult("start must be <= end.");
+            }
+
+            HashSet<string> requestedTypes = typesRaw
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(v => v.ToLowerInvariant())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            HashSet<string> allowedTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "day",
+                "path",
+                "referrer",
+                "country"
+            };
+
+            foreach (string requestedType in requestedTypes)
+            {
+                if (!allowedTypes.Contains(requestedType))
+                {
+                    return new BadRequestObjectResult("types must be a comma-separated list of: day,path,referrer,country.");
+                }
+            }
+
+            if (requestedTypes.Count == 0)
+            {
+                return new BadRequestObjectResult("types must include at least one value.");
+            }
+
+            AnalyticsData data = await CreateAnalyticsData();
+            Dictionary<string, int> rowsWritten = requestedTypes.ToDictionary(
+                type => type,
+                _ => 0,
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (string day in EnumerateDaysInclusive(startDay, endDay))
+            {
+                if (requestedTypes.Contains("day"))
+                {
+                    rowsWritten["day"] += await data.GetAndSaveViewsByDateRange("day", day, day);
+                }
+                if (requestedTypes.Contains("path"))
+                {
+                    rowsWritten["path"] += await data.GetAndSaveViewsByPathByDateRange("day", day, day);
+                }
+                if (requestedTypes.Contains("referrer"))
+                {
+                    rowsWritten["referrer"] += await data.GetAndSaveViewsByReferrerByDateRange("day", day, day);
+                }
+                if (requestedTypes.Contains("country"))
+                {
+                    rowsWritten["country"] += await data.GetAndSaveViewsByCountryByDateRange("day", day, day);
+                }
+            }
+
+            log?.LogInformation(
+                "Analytics backfill complete for {startDay}..{endDay} ({types})",
+                startDay,
+                endDay,
+                string.Join(",", requestedTypes.OrderBy(v => v)));
+
+            return new OkObjectResult(new
+            {
+                start = startDay,
+                end = endDay,
+                types = requestedTypes.OrderBy(v => v).ToArray(),
+                rowsWritten
+            });
+        }
+
         [Function("ComputeViewsByReferrerByDay")]
         [FixedDelayRetry(5, "00:00:10")]
         public static async Task ComputeViewsByReferrerByDay(
@@ -565,6 +652,38 @@ namespace PhotoWebhooks
             }
 
             return fallback;
+        }
+
+        private static string ParseDayOrDefault(HttpRequest req, string key, DateTimeOffset fallback)
+        {
+            string value = GetQueryValue(req, key, string.Empty);
+            if (DateTimeOffset.TryParse(value, out DateTimeOffset parsed))
+            {
+                return AnalyticsData.NormalizeDay(parsed);
+            }
+
+            if (DateTime.TryParseExact(
+                value,
+                "yyyyMMdd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out DateTime compactDay))
+            {
+                return compactDay.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+            }
+
+            return AnalyticsData.NormalizeDay(fallback);
+        }
+
+        private static IEnumerable<string> EnumerateDaysInclusive(string startDay, string endDay)
+        {
+            DateTime start = DateTime.ParseExact(startDay, "yyyyMMdd", CultureInfo.InvariantCulture);
+            DateTime end = DateTime.ParseExact(endDay, "yyyyMMdd", CultureInfo.InvariantCulture);
+
+            for (DateTime day = start; day <= end; day = day.AddDays(1))
+            {
+                yield return day.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+            }
         }
 
     }

@@ -37,7 +37,7 @@ namespace PhotoWebhooks
         [Function("event")]
         public static async Task<IActionResult> trackAnalyticsEvent(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
-            ILogger log)
+            ILogger? log)
         {
             try
             {
@@ -61,11 +61,11 @@ namespace PhotoWebhooks
 
                 if (isCrawlerByHelper)
                 {
-                    log.LogInformation("AnalyticsCrawlerFilteredByHelper signature={signature}", crawlerSignature ?? "unknown");
+                    log?.LogInformation("AnalyticsCrawlerFilteredByHelper signature={signature}", crawlerSignature ?? "unknown");
                 }
                 if (isLocalRequest)
                 {
-                    log.LogInformation("AnalyticsEventIgnoredLocalRequest");
+                    log?.LogInformation("AnalyticsEventIgnoredLocalRequest");
                 }
 
                 if (!isCrawlerByHelper && !isLocalRequest)
@@ -80,7 +80,14 @@ namespace PhotoWebhooks
             }
             catch (Exception e)
             {
-                log.LogError(e, e.Message);
+                if (log != null)
+                {
+                    log.LogError(e, e.Message);
+                }
+                else
+                {
+                    Console.Error.WriteLine(e.ToString());
+                }
                 throw;
             }
         }

@@ -36,13 +36,21 @@ public class ForwardedForHeaderMiddleware : IFunctionsWorkerMiddleware
     {
         var val = GetForwardedFor(context);
         var req = await context.GetHttpRequestDataAsync();
-        req?.Headers.TryAddWithoutValidation(ForwardedHeadersDefaults.XForwardedForHeaderName, val);
+        if (!string.IsNullOrWhiteSpace(val))
+        {
+            req?.Headers.TryAddWithoutValidation(ForwardedHeadersDefaults.XForwardedForHeaderName, val);
+        }
     }
 
     private static string? GetForwardedFor(FunctionContext context)
     {
-        var hdr = context.BindingContext.BindingData["Headers"];
-        dynamic obj = JsonConvert.DeserializeObject(hdr.ToString());
+        if (!context.BindingContext.BindingData.TryGetValue("Headers", out object? rawHeaders)
+            || rawHeaders == null)
+        {
+            return null;
+        }
+
+        dynamic obj = JsonConvert.DeserializeObject(rawHeaders.ToString() ?? string.Empty);
 
         var val = obj?[ForwardedHeadersDefaults.XForwardedForHeaderName]?.Value as string;
         return val;

@@ -56,9 +56,19 @@ namespace PhotoWebhooks
                     analyticsEvent, queueClientOptions);
 
                 RequestRecord request = CreateRequestRecordFromRequest(req, log);
+                bool isCrawlerByHelper = FunctionsHelpers.RequestIsCrawler(request, out string crawlerSignature);
+                bool isLocalRequest = FunctionsHelpers.RequestIsLocal(request);
 
-                if (!FunctionsHelpers.RequestIsCrawler(request) 
-                    && !FunctionsHelpers.RequestIsLocal(request))
+                if (isCrawlerByHelper)
+                {
+                    log.LogInformation("AnalyticsCrawlerFilteredByHelper signature={signature}", crawlerSignature ?? "unknown");
+                }
+                if (isLocalRequest)
+                {
+                    log.LogInformation("AnalyticsEventIgnoredLocalRequest");
+                }
+
+                if (!isCrawlerByHelper && !isLocalRequest)
                 {
                     string message = JsonSerializer.Serialize(request);
                     await queueClient.SendMessageAsync(message);
@@ -114,6 +124,13 @@ namespace PhotoWebhooks
                         request.device = info.Device.Family;
                         request.browser = info.UA.Family;
                         request.isSpider = info.Device.IsSpider;
+                        if (request.isSpider)
+                        {
+                            log.LogInformation(
+                                "AnalyticsCrawlerDetectedByParser browser={browser} device={device}",
+                                request.browser ?? "unknown",
+                                request.device ?? "unknown");
+                        }
                     }
 
                 }

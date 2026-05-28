@@ -4,8 +4,10 @@ using System;
 public static class FunctionsHelpers
 {
 
-    private static string[] crawlerStrings = new string[] {
-            "Bytespider", "AhrefsBot", "bingbot", "Baiduspider", "Googlebot" };
+    private static readonly string[] crawlerStrings = new string[] {
+            "Bytespider", "AhrefsBot", "bingbot", "Baiduspider", "Googlebot",
+            "ClaudeBot", "TikTokSpider", "python-requests", "facebookexternalhit",
+            "SemrushBot", "DotBot", "YandexBot", "MJ12bot", "PetalBot" };
 
     public static string SimplifyReferrer(string referrer)
     {
@@ -69,17 +71,23 @@ public static class FunctionsHelpers
 
     public static bool RequestIsCrawler(RequestRecord request)
     {
-        bool isCrawler = false;
+        return RequestIsCrawler(request, out _);
+    }
+
+    public static bool RequestIsCrawler(RequestRecord request, out string matchedSignature)
+    {
+        string userAgent = request?.user_agent ?? string.Empty;
+        matchedSignature = null;
         for (int i = 0; i < crawlerStrings.Length; i++)
         {
-            if (request.user_agent.Contains(crawlerStrings[i]))
+            if (userAgent.IndexOf(crawlerStrings[i], StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                isCrawler = true;
-                break;
+                matchedSignature = crawlerStrings[i];
+                return true;
             }
         }
 
-        return isCrawler;
+        return false;
     }
 
     public static bool RequestIsLocal(RequestRecord request)
